@@ -41,10 +41,13 @@ export async function POST(req: NextRequest) {
       config: { displayName: file.name },
     });
 
-    const uploadedName = (uploaded as any)?.name as string | undefined;
+    const uploadedName = "name" in uploaded ? uploaded.name : undefined;
     if (!uploadedName) {
       return NextResponse.json(
-        { error: "Upload succeeded but no file name returned. Try PDF or retry." },
+        {
+          error:
+            "Upload succeeded but no file name returned. Try PDF or retry.",
+        },
         { status: 502 }
       );
     }
@@ -57,7 +60,9 @@ export async function POST(req: NextRequest) {
     }
     if (meta.state !== "ACTIVE" || !meta.uri || !meta.mimeType) {
       return NextResponse.json(
-        { error: "File processing failed (not ACTIVE or missing uri/mimeType)." },
+        {
+          error: "File processing failed (not ACTIVE or missing uri/mimeType).",
+        },
         { status: 502 }
       );
     }
@@ -94,24 +99,24 @@ export async function POST(req: NextRequest) {
       contents,
     });
 
-    const full =
-      typeof (resp as any).text === "function"
-        ? (resp as any).text()
-        : ((resp as any).text as string | undefined) || "";
+    if (!resp.text) {
+      return NextResponse.json(
+        { error: "Gemini returned no text response." },
+        { status: 502 }
+      );
+    }
+    const full = resp.text;
 
     // 5) Extract JSON fenced block (robust)
     let parsed: ModelJSON | null = null;
 
     // Preferred: fenced code block with json language
-    let m = full.match(/``````/i);
-    if (!m) {
-      // Fallback: any fenced block
-      m = full.match(/``````/);
-    }
-    if (m && m[1]) {
+    const match = full.match(/```json\s*([\s\S]*?)\s*```/i);
+    if (match && match[1]) {
       try {
-        parsed = JSON.parse(m[1]);
-      } catch {
+        parsed = JSON.parse(match[1]) as ModelJSON;
+      } catch (err) {
+        console.error("JSON parse error:", err);
         parsed = null;
       }
     }
@@ -124,8 +129,12 @@ export async function POST(req: NextRequest) {
         const maybeJson = full.slice(firstBrace, lastBrace + 1);
         try {
           parsed = JSON.parse(maybeJson) as ModelJSON;
-        } catch {
-          // ignore
+        } catch (e) {
+          const err = e as Error;
+          return NextResponse.json(
+            { error: err.message || "Unexpected error" },
+            { status: 500 }
+          );
         }
       }
     }
@@ -158,9 +167,10 @@ export async function POST(req: NextRequest) {
       raw: full,
       json: parsed,
     });
-  } catch (e: any) {
+  } catch (e) {
+    const err = e as Error;
     return NextResponse.json(
-      { error: e?.message || "Unexpected error" },
+      { error: err.message || "Unexpected error" },
       { status: 500 }
     );
   }

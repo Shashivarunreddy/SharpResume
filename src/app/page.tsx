@@ -1,9 +1,27 @@
 "use client";
 
 import { useState } from "react";
+type ModelJSON = {
+    summaryRewrite: string;
+    skillsToAdd?: string[];
+    bullets?: { section?: string; original?: string; suggested: string }[];
+    projectideas?: string[];
+    notes?: string[];
+  };
 
+      type AnalysisResult = {
+      summary: string;
+      Suggestions: string[];
+      projects: string[];
+      bulletReplacements: string[];
+      toAdd: string[];
+      raw: string;
+      json: ModelJSON | null;
+    };
 export default function Home() {
-  const [results, setResults] = useState<any | null>(null);
+
+ 
+ const [results, setResults] = useState<AnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   async function handleSubmit(formData: FormData) {
