@@ -4,15 +4,22 @@ import { useState } from "react";
 
 export default function Home() {
   const [results, setResults] = useState<any | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   async function handleSubmit(formData: FormData) {
-    const res = await fetch("/api/analyze", {
-      method: "POST",
-      body: formData,
-    });
-    const data = await res.json();
-    setResults(data);
+    try {
+      setIsLoading(true); // start spinner
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      setResults(data);
+    } finally {
+      setIsLoading(false); // stop spinner
+    }
   }
+
   return (
     <div className="min-h-screen bg-white text-black flex flex-col items-center p-8">
       <h1 className="text-2xl font-bold mb-6">Resume Analyzer</h1>
@@ -74,9 +81,7 @@ export default function Home() {
 
         {/* Target Role/Seniority */}
         <div>
-          <label className="block mb-1 font-medium">
-            Target Role/Seniority
-          </label>
+          <label className="block mb-1 font-medium">Target Role/Seniority</label>
           <select
             name="role"
             className="w-full border border-black rounded-lg p-2 bg-white text-black"
@@ -94,13 +99,41 @@ export default function Home() {
         <button
           type="submit"
           className="w-full border border-black rounded-lg p-2 font-semibold hover:bg-black hover:text-white transition"
+          disabled={isLoading}
         >
-          Analyze Resume
+          {isLoading ? "Analyzing…" : "Analyze Resume"}
         </button>
       </form>
 
+      {/* --- Spinner (below form) --- */}
+      {isLoading && (
+        <div className="w-full max-w-xl mt-4 border border-black rounded-xl p-4 flex items-center justify-center">
+          {/* Tailwind SVG spinner */}
+          <svg
+            className="animate-spin h-6 w-6 text-black"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+            />
+          </svg>
+          <span className="ml-3 text-sm">Processing your resume…</span>
+        </div>
+      )}
+
       {/* --- Results Panel --- */}
-      {results && (
+      {results && !isLoading && (
         <div className="w-full max-w-2xl mt-8 border border-black rounded-xl p-6 space-y-4">
           <h2 className="text-xl font-bold">Results</h2>
 
@@ -128,9 +161,14 @@ export default function Home() {
           </div>
 
           <div>
-            <h3 className="font-semibold">Suggested Title Tweaks</h3>
-            <p className="text-sm">{results.titleTweaks}</p>
+            <h3 className="font-semibold">Additional Suggestions</h3>
+            <ul className="list-disc pl-5 text-sm">
+              {results.Suggestions?.map((s: string, i: number) => (
+                <li key={i}>{s}</li>
+              ))}
+            </ul>
           </div>
+
 
           <button
             onClick={() => {

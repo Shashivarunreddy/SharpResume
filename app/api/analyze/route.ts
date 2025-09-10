@@ -10,9 +10,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type ModelJSON = {
-  recommendedTitle?: string;
-  summaryRewrite?: string;
-  missingKeywords?: string[];
+  summaryRewrite: string;
+  missingKeywords: string[];
   skillsToAdd?: string[];
   bullets?: { section?: string; original?: string; suggested: string }[];
   notes?: string[];
@@ -66,13 +65,13 @@ export async function POST(req: NextRequest) {
     // 3) Build prompt
     const system = [
       "You are an ATS optimization assistant.",
-      "Task: analyze the attached resume and the Job Description to maximize ATS keyword alignment while preserving truthfulness.",
+      "Task: analyze the attached resume and the Job Description to maximize ATS keyword alignment while preserving truthfulness. Your job is to rewrite this in a professional way, using the STAR (Situation, Task, Action, Result) method for my experience bullet points. Quantify my achievements wherever possible.",
       strictATS
         ? "Strict ATS mode: prefer exact JD terminology, single-column structure, standard section headers, no tables/columns/images."
         : "Balance ATS keyword coverage with clarity and conciseness.",
       "Return two outputs:",
       "1) GUIDANCE: Human-readable guidance with sections: Title & Summary, Skills to Add, Experience Bullet Rewrites, Keyword Coverage vs JD, Formatting for ATS.",
-      "2) JSON only in a fenced code block labeled json with fields: recommendedTitle, summaryRewrite, missingKeywords[], skillsToAdd[], bullets[{section, original?, suggested}], notes[].",
+      "2) JSON only in a fenced code block labeled json with fields: summaryRewrite, missingKeywords[], skillsToAdd[], bullets[{section, original?, suggested}], notes[].",
       "Bullets should be action-oriented and quantify impact where possible.",
       role ? `Target seniority: ${role}.` : "",
     ]
@@ -135,10 +134,8 @@ export async function POST(req: NextRequest) {
     const summary =
       parsed?.summaryRewrite ||
       "No summary rewrite returned. Check JSON block above for details.";
-    const titleTweaks =
-      parsed?.recommendedTitle ||
-      "No title recommendation returned. Consider aligning the role title to the JD.";
     const keywordGaps = parsed?.missingKeywords ?? [];
+    const Suggestions = parsed?.notes ?? [];
     const bulletReplacements =
       parsed?.bullets
         ?.map((b) =>
@@ -152,9 +149,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       summary,
-      titleTweaks,
       keywordGaps,
       bulletReplacements,
+      Suggestions,
       raw: full,
       json: parsed,
     });
