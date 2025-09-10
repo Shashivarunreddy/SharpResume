@@ -81,7 +81,9 @@ export default function Home() {
 
         {/* Target Role/Seniority */}
         <div>
-          <label className="block mb-1 font-medium">Target Role/Seniority</label>
+          <label className="block mb-1 font-medium">
+            Target Role/Seniority
+          </label>
           <select
             name="role"
             className="w-full border border-black rounded-lg p-2 bg-white text-black"
@@ -143,10 +145,21 @@ export default function Home() {
           </div>
 
           <div>
-            <h3 className="font-semibold">Keyword Gaps</h3>
+            <h3 className="font-semibold">Skills to Consider Adding</h3>
             <ul className="list-disc pl-5 text-sm">
-              {results.keywordGaps?.map((kw: string, i: number) => (
-                <li key={i}>{kw}</li>
+              {results.toAdd?.map((skill: string, i: number) => (
+                <li key={i}>{skill}</li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="font-semibold">Project Ideas to Consider Adding</h3>
+            <ul>
+              {results.projects?.map((project: string, i: number) => (
+                <li key={i} className="text-sm mb-2">
+                  - {project}
+                </li>
               ))}
             </ul>
           </div>
@@ -168,7 +181,6 @@ export default function Home() {
               ))}
             </ul>
           </div>
-
 
           <button
             onClick={() => {
