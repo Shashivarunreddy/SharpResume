@@ -4,12 +4,30 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 
+// 🧩 Escape user input to prevent LaTeX syntax errors
+function escapeLatex(str: string): string {
+  if (typeof str !== "string") return str;
+  return str
+    .replace(/&/g, "\\&")
+    .replace(/%/g, "\\%")
+    .replace(/\$/g, "\\$")
+    .replace(/#/g, "\\#")
+    .replace(/_/g, "\\_")
+    .replace(/\^/g, "\\^{}")
+    .replace(/~/g, "\\~{}");
+}
+
 export async function POST(req: NextRequest) {
   const tempFiles: string[] = [];
+
   try {
     const body = await req.json();
-    const texContent = body.code;
+    let texContent = body.code;
+
     if (!texContent) throw new Error("No LaTeX content provided");
+
+    // ✅ Escape all unsafe characters before writing
+    texContent = escapeLatex(texContent);
 
     // Step 1: Create temporary file paths
     const fileName = `document-${Date.now()}`;
@@ -27,7 +45,7 @@ export async function POST(req: NextRequest) {
 
     const wslDir = path.posix.dirname(wslTexPath);
 
-    // Step 4: Run pdflatex inside WSL using spawn
+    // Step 4: Run pdflatex inside WSL
     await new Promise<void>((resolve, reject) => {
       const cmd = spawn("wsl", [
         "zsh",
@@ -57,7 +75,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (error: any) {
     console.error("Compilation error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to generate PDF", details: error }, { status: 500 });
   } finally {
     // Step 6: Clean up temp files
     for (const file of tempFiles) {

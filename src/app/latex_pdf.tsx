@@ -1,15 +1,14 @@
 "use client";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import CodeMirror from "@uiw/react-codemirror";
 import { StreamLanguage } from "@codemirror/language";
 import { stex } from "@codemirror/legacy-modes/mode/stex";
 import { oneDark } from "@codemirror/theme-one-dark";
 
 export default function LatexPDF() {
-  const [code, setCode] = useState(`\\documentclass{article}
-\\begin{document}
-Hello, \\LaTeX!
-\\end{document}`);
+  const [code, setCode] = useState(
+    "\\documentclass{article}\n\\begin{document}\nHello, \\LaTeX!\n\\end{document}"
+  );
   const [pdfUrl, setPdfUrl] = useState("");
   const [isCompiling, setIsCompiling] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -18,6 +17,28 @@ Hello, \\LaTeX!
     () => code.trim().length > 0 && !isCompiling,
     [code, isCompiling]
   );
+
+  // ✅ Auto-fetch LaTeX every 3 seconds if new data is available
+  useEffect(() => {
+    const pollForLatex = async () => {
+      try {
+        const res = await fetch("/api/fill_form"); // GET
+        if (!res.ok) return;
+        const data = await res.json();
+
+        if (data.updated && data.latex) {
+          console.log("🆕 New LaTeX detected, updating editor...");
+          setCode(data.latex);
+        }
+      } catch (err: any) {
+        console.error("Polling error:", err.message);
+      }
+    };
+
+    // Poll every 3 seconds
+    const interval = setInterval(pollForLatex, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   const compileLatex = async () => {
     if (!canCompile) return;
@@ -55,7 +76,9 @@ Hello, \\LaTeX!
         <div className="flex items-center gap-2">
           <span className="font-semibold tracking-tight">LaTeX Preview</span>
           <span className="text-slate-500">|</span>
-          <span className="text-xs text-slate-400">Live editor and PDF viewer</span>
+          <span className="text-xs text-slate-400">
+            Live editor and PDF viewer
+          </span>
         </div>
         <div className="flex items-center gap-3">
           {error ? (
@@ -70,7 +93,9 @@ Hello, \\LaTeX!
               "inline-flex items-center rounded-md border px-3 py-2 text-sm font-semibold transition",
               "bg-blue-600 border-blue-500 text-white hover:bg-blue-500",
               isCompiling ? "opacity-80 cursor-default" : "",
-              !canCompile ? "opacity-50 cursor-not-allowed hover:bg-blue-600" : "",
+              !canCompile
+                ? "opacity-50 cursor-not-allowed hover:bg-blue-600"
+                : "",
             ].join(" ")}
           >
             {isCompiling ? "Compiling…" : "Compile"}
@@ -128,7 +153,8 @@ Hello, \\LaTeX!
                   Click Compile to render the PDF
                 </p>
                 <p className="m-0 text-xs text-slate-400">
-                  Ensure document has \documentclass and \begin&#123;document&#125; … \end&#123;document&#125;
+                  Ensure document has \documentclass and
+                  \begin&#123;document&#125; … \end&#123;document&#125;
                 </p>
               </div>
             )}
