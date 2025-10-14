@@ -4,19 +4,6 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 
-// 🧩 Escape user input to prevent LaTeX syntax errors
-function escapeLatex(str: string): string {
-  if (typeof str !== "string") return str;
-  return str
-    .replace(/&/g, "\\&")
-    .replace(/%/g, "\\%")
-    .replace(/\$/g, "\\$")
-    .replace(/#/g, "\\#")
-    .replace(/_/g, "\\_")
-    .replace(/\^/g, "\\^{}")
-    .replace(/~/g, "\\~{}");
-}
-
 export async function POST(req: NextRequest) {
   const tempFiles: string[] = [];
 
@@ -26,23 +13,19 @@ export async function POST(req: NextRequest) {
 
     if (!texContent) throw new Error("No LaTeX content provided");
 
-    // ✅ Escape all unsafe characters before writing
-    texContent = escapeLatex(texContent);
-
     // Step 1: Create temporary file paths
     const fileName = `document-${Date.now()}`;
     const windowsTexPath = path.join(os.tmpdir(), `${fileName}.tex`);
     const windowsPdfPath = path.join(os.tmpdir(), `${fileName}.pdf`);
     tempFiles.push(windowsTexPath, windowsPdfPath);
 
-    // Step 2: Write LaTeX content
+    // Step 2: Write LaTeX content to temporary file
     fs.writeFileSync(windowsTexPath, texContent, "utf8");
 
     // Step 3: Convert Windows path to WSL path
     const wslTexPath = windowsTexPath
       .replace(/\\/g, "/")
       .replace(/^([A-Za-z]):/, (_, drive) => `/mnt/${drive.toLowerCase()}`);
-
     const wslDir = path.posix.dirname(wslTexPath);
 
     // Step 4: Run pdflatex inside WSL
@@ -69,15 +52,18 @@ export async function POST(req: NextRequest) {
     // Step 5: Read compiled PDF
     const pdfBuffer = fs.readFileSync(windowsPdfPath);
 
-    // ✅ Send PDF back as response
+    // ✅ Send PDF as response
     return new NextResponse(pdfBuffer, {
       headers: { "Content-Type": "application/pdf" },
     });
   } catch (error: any) {
     console.error("Compilation error:", error);
-    return NextResponse.json({ error: "Failed to generate PDF", details: error }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to generate PDF", details: error.message },
+      { status: 500 }
+    );
   } finally {
-    // Step 6: Clean up temp files
+    // Step 6: Cleanup temporary files
     for (const file of tempFiles) {
       try {
         if (fs.existsSync(file)) fs.unlinkSync(file);
