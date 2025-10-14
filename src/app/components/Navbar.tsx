@@ -41,6 +41,14 @@ export const Navbar = () => {
           >
             Latex/Pdf
           </Link>
+          <Link
+            href="/form"
+            className={`hover:text-blue-600 transition ${
+              pathname === "/form" ? "font-semibold text-blue-600" : ""
+            }`}
+          >
+            form fill
+          </Link>
         </div>
       </div>
     </nav>
