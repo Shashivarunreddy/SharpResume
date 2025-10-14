@@ -35,7 +35,7 @@ export default function LatexPDF() {
       }
     };
 
-    // Poll every 3 seconds
+    // Poll every 10 seconds
     const interval = setInterval(pollForLatex, 10000);
     return () => clearInterval(interval);
   }, []);
