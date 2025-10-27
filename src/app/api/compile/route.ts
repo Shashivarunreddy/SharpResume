@@ -30,10 +30,11 @@ export async function POST(req: NextRequest) {
 
     // Step 4: Run pdflatex inside WSL
     await new Promise<void>((resolve, reject) => {
-      const cmd = spawn("wsl", [
-        "zsh",
-        "-ic",
-        `pdflatex -interaction=nonstopmode -halt-on-error -output-directory='${wslDir}' '${wslTexPath}'`,
+      const cmd = spawn("pdflatex", [
+        "-interaction=nonstopmode",
+        "-halt-on-error",
+        `-output-directory=${wslDir}`,
+        wslTexPath,
       ]);
 
       let stderr = "";
