@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 
 
 export const metadata: Metadata = {
-  title: "SharpResume",
+  title: "CreoRez",
   description: "AI-powered LaTeX Resume Builder",
 };
 

@@ -1,4 +1,3 @@
-// src/components/Navbar.tsx
 "use client";
 
 import Link from "next/link";
@@ -12,7 +11,7 @@ export const Navbar = () => {
       <div className="max-w-7xl mx-auto flex justify-between items-center px-6 py-3">
         {/* Left Section */}
         <div className="text-2xl font-bold tracking-tight">
-          <Link href="/">Sharp<span className="text-blue-600">Resume</span></Link>
+          <Link href="/">Creo<span className="text-blue-600">Rez</span></Link>
         </div>
 
         {/* Middle Section (Links) */}
@@ -48,6 +47,14 @@ export const Navbar = () => {
             }`}
           >
             form fill
+          </Link>
+          <Link
+            href="/Enhance_form"
+            className={`hover:text-blue-600 transition ${
+              pathname === "/Enhance_form" ? "font-semibold text-blue-600" : ""
+            }`}
+          >
+            Enhance form
           </Link>
         </div>
       </div>
