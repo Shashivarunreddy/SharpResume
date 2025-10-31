@@ -146,6 +146,7 @@ export default function ProfileForm() {
             <input placeholder="Project Name" value={proj.name} onChange={(e) => handleArrayChange("projects", i, "name", e.target.value)} className="input mb-2" />
             <input placeholder="GitHub Link" value={proj.github} onChange={(e) => handleArrayChange("projects", i, "github", e.target.value)} className="input mb-2" />
             <input placeholder="Live Link" value={proj.live} onChange={(e) => handleArrayChange("projects", i, "live", e.target.value)} className="input mb-2" />
+          
             <textarea placeholder="Points (comma separated)" value={proj.points.join(", ")} onChange={(e) => handleArrayChange("projects", i, "points", e.target.value.split(","))} className="input" />
             <button type="button" onClick={() => handleRemoveField("projects", i)} className="text-red-500 mt-2 text-sm">Remove</button>
           </div>

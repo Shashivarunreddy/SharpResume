@@ -1,0 +1,12 @@
+"use client"
+import React from 'react'
+
+function page() {
+  return (
+    <div>
+      hello worls
+    </div>
+  )
+}
+
+export default page
