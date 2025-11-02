@@ -56,6 +56,14 @@ export const Navbar = () => {
           >
             Enhance form
           </Link>
+          <Link
+            href="/my_resume"
+            className={`hover:text-blue-600 transition ${
+              pathname === "/my_resume" ? "font-semibold text-blue-600" : ""
+            }`}
+          >
+            my resume
+          </Link>
         </div>
       </div>
     </nav>
