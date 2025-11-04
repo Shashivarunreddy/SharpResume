@@ -64,6 +64,15 @@ export const Navbar = () => {
           >
             my resume
           </Link>
+
+          <Link
+        href="/sign-in"
+        className={`hover:text-blue-600 transition ${
+          pathname === "/sign-in" ? "font-semibold text-blue-600" : ""
+        }`}
+      >
+        Sign In
+      </Link>
         </div>
       </div>
     </nav>
