@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { dynamicResumeTemplate } from "@/app/lib/templates/dynamicResumeTemplate";
+import { dynamicResumeTemplate } from "@/templates/dynamicResumeTemplate";
 
 let lastFormData: any = null;
 let hasNewUpdate = false; // Tracks if a new LaTeX was generated

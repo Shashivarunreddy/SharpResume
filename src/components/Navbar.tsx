@@ -25,12 +25,12 @@ export const Navbar = () => {
             Home
           </Link>
           <Link
-            href="/analyze"
+            href="/ATS_Score"
             className={`hover:text-blue-600 transition ${
-              pathname === "/analyze" ? "font-semibold text-blue-600" : ""
+              pathname === "/ATS_Score" ? "font-semibold text-blue-600" : ""
             }`}
           >
-            Analyze
+            ATS Score
           </Link>
           <Link
             href="/latex_pdf"
@@ -49,12 +49,12 @@ export const Navbar = () => {
             form fill
           </Link>
           <Link
-            href="/Enhance_form"
+            href="/enhance_resume"
             className={`hover:text-blue-600 transition ${
-              pathname === "/Enhance_form" ? "font-semibold text-blue-600" : ""
+              pathname === "/enhance_resume" ? "font-semibold text-blue-600" : ""
             }`}
           >
-            Enhance form
+            Enhance resume
           </Link>
           <Link
             href="/my_resume"
