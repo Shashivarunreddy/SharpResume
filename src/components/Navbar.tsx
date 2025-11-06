@@ -19,9 +19,13 @@ export function Navbar() {
 
       {/* Middle Section - Nav Links */}
       <div className="flex items-center gap-6 text-gray-700 font-medium">
-        <Link href="/">Home</Link>
         <Link href="/resume">Resume Builder</Link>
         <Link href="/dashboard">Dashboard</Link>
+        <Link href="/ATS_Score">ATS Score</Link>
+        <Link href="/latex_pdf">Latex/Pdf</Link>
+        <Link href="/form">form fill</Link>
+        <Link href="/enhance_resume">Enhance resume</Link>
+        <Link href="/my_resume">my resume</Link>
       </div>
 
       {/* Right Section - Auth Buttons */}
