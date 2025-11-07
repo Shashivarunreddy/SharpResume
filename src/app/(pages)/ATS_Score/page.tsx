@@ -35,7 +35,7 @@ export default function Basic() {
 
   return (
     <div className="min-h-screen bg-white text-black flex flex-col items-center p-8">
-      <h1 className="text-2xl font-bold mb-6">ATS Resume Analyzer</h1>
+      <h1 className="text-2xl font-bold mb-6">ATS Score</h1>
 
       {/* Form */}
       <form

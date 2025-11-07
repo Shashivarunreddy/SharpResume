@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
-        { error: "Server missing Gemini API Key. Set GEMINI_API_KEY in .env." },
+        { error: "Server missing  API Key. Set API_KEY in .env." },
         { status: 500 }
       );
     }

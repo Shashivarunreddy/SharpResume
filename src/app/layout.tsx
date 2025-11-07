@@ -2,6 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Navbar } from "../components/Navbar";
+import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
   title: "CreoRez",
@@ -17,8 +18,9 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
         <body className="bg-white text-black antialiased">
-          <Navbar /> {/* Move Clerk UI inside Navbar */}
+          <Navbar />
           <main className="pt-16">{children}</main>
+          <Footer />
         </body>
       </html>
     </ClerkProvider>

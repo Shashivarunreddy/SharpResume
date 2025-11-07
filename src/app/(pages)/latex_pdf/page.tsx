@@ -45,7 +45,7 @@ export default function LatexPDF() {
     setIsCompiling(true);
     setError(null);
     try {
-      const res = await fetch("/api/compile", {
+      const res = await fetch("http://13.208.244.123:3001/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code }),
