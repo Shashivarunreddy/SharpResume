@@ -1,18 +1,20 @@
-// app/api/analyze/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI, createPartFromUri, createUserContent } from "@google/genai";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+type ImprovementItem = string | { name: string; description?: string };
+type BulletItem = { section?: string; original?: string; suggested: string };
+
 type ModelJSON = {
   atsScore?: number;
   keywordMatch?: number;
-  improvementTips?: (string | { name: string; description: string })[];
-  skillsToAdd?: (string | { name: string; description: string })[];
-  bullets?: { section?: string; original?: string; suggested: string }[];
-  projectideas?: (string | { name: string; description: string })[];
-  notes?: (string | { name: string; description: string })[];
+  improvementTips?: ImprovementItem[];
+  skillsToAdd?: ImprovementItem[];
+  bullets?: BulletItem[];
+  projectideas?: ImprovementItem[];
+  notes?: ImprovementItem[];
 };
 
 export async function POST(req: NextRequest) {
@@ -31,7 +33,7 @@ export async function POST(req: NextRequest) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
-        { error: "Server missing  API Key. Set API_KEY in .env." },
+        { error: "Server missing API Key. Set GEMINI_API_KEY in .env." },
         { status: 500 }
       );
     }
@@ -66,7 +68,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Prompt
+    // Prompt for Gemini
     const system = `
 You are an ATS scoring assistant.
 
@@ -114,8 +116,9 @@ Output exactly this JSON inside a fenced code block:
 
     const full = resp.text;
     let parsed: ModelJSON | null = null;
-    const match = full.match(/```json\s*([\s\S]*?)\s*```/i);
 
+    // Extract JSON block
+    const match = full.match(/```json\s*([\s\S]*?)\s*```/i);
     if (match && match[1]) {
       try {
         parsed = JSON.parse(match[1]) as ModelJSON;
@@ -129,7 +132,7 @@ Output exactly this JSON inside a fenced code block:
       const lb = full.lastIndexOf("}");
       if (fb !== -1 && lb > fb) {
         try {
-          parsed = JSON.parse(full.slice(fb, lb + 1));
+          parsed = JSON.parse(full.slice(fb, lb + 1)) as ModelJSON;
         } catch {
           parsed = null;
         }
@@ -143,13 +146,15 @@ Output exactly this JSON inside a fenced code block:
       );
     }
 
-    // ✅ Sanitize all outputs
-    const flatten = (arr?: any[]) =>
+    // ✅ Type-safe flatten helper
+    const flatten = <T extends string | { name: string; description?: string }>(
+      arr?: T[]
+    ): string[] =>
       arr?.map((x) =>
         typeof x === "string"
           ? x
           : x?.name
-          ? `${x.name}: ${x.description || ""}`
+          ? `${x.name}: ${x.description ?? ""}`
           : JSON.stringify(x)
       ) ?? [];
 
@@ -163,8 +168,8 @@ Output exactly this JSON inside a fenced code block:
       raw: full,
       json: parsed,
     });
-  } catch (e) {
-    const err = e as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (e: unknown) {
+    const errMsg = e instanceof Error ? e.message : "Unknown error occurred";
+    return NextResponse.json({ error: errMsg }, { status: 500 });
   }
 }

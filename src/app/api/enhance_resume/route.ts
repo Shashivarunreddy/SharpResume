@@ -1,20 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI, createUserContent } from "@google/genai";
+import type { ResumeData } from "@/templates/dynamicResumeTemplate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+interface EnhancedResumeResponse {
+  enhanced: ResumeData;
+  latex: string;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { formData, jobDescription, apiKey } = body;
+    const { formData, jobDescription } = body;
+    const apiKey = process.env.GEMINI_API_KEY;
 
-    if (!apiKey || !formData || !jobDescription) {
+    if (!apiKey) {
       return NextResponse.json(
-        { error: "Missing apiKey, formData, or jobDescription." },
+        { error: "Missing API Key in server environment." },
+        { status: 500 }
+      );
+    }
+
+    if (!formData || !jobDescription) {
+      return NextResponse.json(
+        { error: "Missing formData or jobDescription." },
         { status: 400 }
       );
     }
+
 
     // ✅ Initialize Gemini client
     const ai = new GoogleGenAI({ apiKey });
@@ -84,13 +99,13 @@ Return only the JSON inside a fenced block like:
       );
     }
 
-    // ✅ Extract JSON block
+    // ✅ Extract JSON block safely
     const match = fullText.match(/```json\s*([\s\S]*?)\s*```/i);
-    let enhanced: any = null;
+    let enhanced: ResumeData | null = null;
 
     if (match?.[1]) {
       try {
-        enhanced = JSON.parse(match[1]);
+        enhanced = JSON.parse(match[1]) as ResumeData;
       } catch (err) {
         console.error("JSON parse error:", err);
       }
@@ -101,7 +116,7 @@ Return only the JSON inside a fenced block like:
       const end = fullText.lastIndexOf("}");
       if (start !== -1 && end > start) {
         try {
-          enhanced = JSON.parse(fullText.slice(start, end + 1));
+          enhanced = JSON.parse(fullText.slice(start, end + 1)) as ResumeData;
         } catch (err) {
           console.error("Fallback parse error:", err);
         }
@@ -115,12 +130,15 @@ Return only the JSON inside a fenced block like:
       );
     }
 
-    // ✅ Auto-call /api/generate-latex
-    const latexResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/fill_form`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(enhanced),
-    });
+    // ✅ Auto-call /api/fill_form to generate LaTeX
+    const latexResponse = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/fill_form`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(enhanced),
+      }
+    );
 
     const latexData = await latexResponse.json();
 
@@ -128,15 +146,15 @@ Return only the JSON inside a fenced block like:
       console.error("❌ LaTeX generation failed:", latexData);
     }
 
-    return NextResponse.json({
+    const result: EnhancedResumeResponse = {
       enhanced,
       latex: latexData?.latex || "",
-    });
-  } catch (error: any) {
-    console.error("❌ Error in /api/enhance:", error);
-    return NextResponse.json(
-      { error: error.message || "Unexpected error" },
-      { status: 500 }
-    );
+    };
+
+    return NextResponse.json(result);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unexpected error";
+    console.error("❌ Error in /api/enhance:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

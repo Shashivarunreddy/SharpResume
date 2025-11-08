@@ -18,24 +18,28 @@ export default function LatexPDF() {
     [code, isCompiling]
   );
 
-  // ✅ Auto-fetch LaTeX every 3 seconds if new data is available
+  // ✅ Auto-fetch LaTeX every 10 seconds if new data is available
   useEffect(() => {
     const pollForLatex = async () => {
       try {
         const res = await fetch("/api/fill_form"); // GET
         if (!res.ok) return;
-        const data = await res.json();
+        const data: { updated?: boolean; latex?: string } = await res.json();
 
         if (data.updated && data.latex) {
           console.log("🆕 New LaTeX detected, updating editor...");
           setCode(data.latex);
         }
-      } catch (err: any) {
-        console.error("Polling error:", err.message);
+      } catch (err) {
+        // ✅ Properly typed error handling
+        if (err instanceof Error) {
+          console.error("Polling error:", err.message);
+        } else {
+          console.error("Unknown polling error:", err);
+        }
       }
     };
 
-    // Poll every 10 seconds
     const interval = setInterval(pollForLatex, 10000);
     return () => clearInterval(interval);
   }, []);
@@ -62,8 +66,13 @@ export default function LatexPDF() {
         if (prev) URL.revokeObjectURL(prev);
         return url;
       });
-    } catch (e: any) {
-      setError(e?.message || "Compilation failed");
+    } catch (err) {
+      // ✅ Strongly typed error
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Compilation failed due to unknown error");
+      }
     } finally {
       setIsCompiling(false);
     }
@@ -103,7 +112,7 @@ export default function LatexPDF() {
         </div>
       </header>
 
-      {/* Main split with enforced minimum widths to resist zoom squeeze */}
+      {/* Main split */}
       <main className="grid min-h-0 flex-1 grid-cols-[minmax(420px,1fr)_1px_minmax(520px,1fr)]">
         {/* Left: Editor */}
         <section className="flex min-h-0 min-w-[420px] flex-col">
@@ -112,7 +121,6 @@ export default function LatexPDF() {
             <span className="text-xs text-slate-400">LaTeX (TeX) mode</span>
           </div>
           <div className="min-h-0 flex-1 p-3">
-            {/* Force internal scroll so the editor doesn't expand and starve the preview */}
             <div className="h-full overflow-auto rounded-lg border border-slate-800 shadow-sm">
               <CodeMirror
                 value={code}

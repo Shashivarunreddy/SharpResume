@@ -2,23 +2,68 @@
 
 import { useState } from "react";
 
+// ------------------ Types ------------------
+interface SkillSet {
+  languages: string;
+  tools: string;
+  web: string;
+  devops: string;
+}
+
+interface Experience {
+  role: string;
+  company: string;
+  dates: string;
+  location: string;
+  points: string[];
+}
+
+interface Project {
+  name: string;
+  github: string;
+  live: string;
+  points: string[];
+}
+
+interface Certification {
+  title: string;
+  org: string;
+  date: string;
+  link: string;
+}
+
+interface Education {
+  institution: string;
+  duration: string;
+  degree: string;
+  grade: string;
+}
+
+interface FormData {
+  name: string;
+  phone: string;
+  email: string;
+  linkedin: string;
+  github: string;
+  summary: string;
+  skills: SkillSet;
+  experience: Experience[];
+  projects: Project[];
+  certifications: Certification[];
+  education: Education[];
+}
+
+// ------------------ Component ------------------
 export default function ProfileForm() {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     name: "",
     phone: "",
     email: "",
     linkedin: "",
     github: "",
     summary: "",
-    skills: {
-      languages: "",
-      tools: "",
-      web: "",
-      devops: "",
-    },
-    experience: [
-      { role: "", dates: "", company: "", location: "", points: [""] },
-    ],
+    skills: { languages: "", tools: "", web: "", devops: "" },
+    experience: [{ role: "", company: "", dates: "", location: "", points: [""] }],
     projects: [{ name: "", github: "", live: "", points: [""] }],
     certifications: [{ title: "", org: "", date: "", link: "" }],
     education: [{ institution: "", duration: "", degree: "", grade: "" }],
@@ -27,41 +72,68 @@ export default function ProfileForm() {
   // ✅ Generic handler for text inputs
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-    section?: string,
+    section?: keyof FormData,
     key?: string
   ) => {
     const { name, value } = e.target;
-    if (section && key) {
+
+    if (section === "skills" && key) {
       setFormData((prev) => ({
         ...prev,
-        [section]: { ...prev[section], [key]: value },
+        skills: { ...prev.skills, [key]: value },
       }));
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
   };
 
-  // ✅ Handlers for dynamic array fields
-  const handleArrayChange = (
-    section: string,
-    index: number,
-    key: string,
-    value: string
-  ) => {
-    const updated = [...(formData as any)[section]];
-    updated[index][key] = value;
-    setFormData((prev) => ({ ...prev, [section]: updated }));
-  };
+  // ✅ Type-safe dynamic array handler
+  const handleArrayChange = <
+  T extends keyof FormData,
+  U extends FormData[T] extends Array<infer R> ? R : never
+>(
+  section: T,
+  index: number,
+  key: keyof U,
+  value: string | string[]
+) => {
+  const sectionArray = formData[section] as unknown as U[];
+  const updated = [...sectionArray];
+  const currentItem = updated[index] ?? ({} as U);
 
-  const handleAddField = (section: string, template: any) => {
+  // Ensure it's an object before spreading
+  updated[index] = { ...(currentItem as object), [key]: value } as U;
+
+  setFormData((prev) => ({
+    ...prev,
+    [section]: updated,
+  }));
+};
+
+
+  // ✅ Add field dynamically
+  const handleAddField = <
+    T extends keyof FormData,
+    U extends FormData[T] extends Array<infer R> ? R : never
+  >(
+    section: T,
+    template: U
+  ) => {
     setFormData((prev) => ({
       ...prev,
-      [section]: [...(prev as any)[section], template],
+      [section]: [...(prev[section] as U[]), template],
     }));
   };
 
-  const handleRemoveField = (section: string, index: number) => {
-    const updated = [...(formData as any)[section]];
+  // ✅ Remove field dynamically
+  const handleRemoveField = <
+    T extends keyof FormData,
+    U extends FormData[T] extends Array<infer R> ? R : never
+  >(
+    section: T,
+    index: number
+  ) => {
+    const updated = [...(formData[section] as U[])];
     updated.splice(index, 1);
     setFormData((prev) => ({ ...prev, [section]: updated }));
   };
@@ -70,7 +142,7 @@ export default function ProfileForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch("http://localhost:3000/api/fill_form", {
+      const res = await fetch("/api/fill_form", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -87,6 +159,7 @@ export default function ProfileForm() {
     }
   };
 
+  // ------------------ JSX ------------------
   return (
     <div className="min-h-screen bg-white text-black p-6 flex justify-center">
       <form
@@ -135,7 +208,11 @@ export default function ProfileForm() {
             <button type="button" onClick={() => handleRemoveField("experience", i)} className="text-red-500 mt-2 text-sm">Remove</button>
           </div>
         ))}
-        <button type="button" onClick={() => handleAddField("experience", { role: "", company: "", dates: "", location: "", points: [""] })} className="add-btn">
+        <button
+          type="button"
+          onClick={() => handleAddField("experience", { role: "", company: "", dates: "", location: "", points: [""] })}
+          className="add-btn"
+        >
           + Add Experience
         </button>
 
@@ -146,12 +223,15 @@ export default function ProfileForm() {
             <input placeholder="Project Name" value={proj.name} onChange={(e) => handleArrayChange("projects", i, "name", e.target.value)} className="input mb-2" />
             <input placeholder="GitHub Link" value={proj.github} onChange={(e) => handleArrayChange("projects", i, "github", e.target.value)} className="input mb-2" />
             <input placeholder="Live Link" value={proj.live} onChange={(e) => handleArrayChange("projects", i, "live", e.target.value)} className="input mb-2" />
-          
             <textarea placeholder="Points (comma separated)" value={proj.points.join(", ")} onChange={(e) => handleArrayChange("projects", i, "points", e.target.value.split(","))} className="input" />
             <button type="button" onClick={() => handleRemoveField("projects", i)} className="text-red-500 mt-2 text-sm">Remove</button>
           </div>
         ))}
-        <button type="button" onClick={() => handleAddField("projects", { name: "", github: "", live: "", points: [""] })} className="add-btn">
+        <button
+          type="button"
+          onClick={() => handleAddField("projects", { name: "", github: "", live: "", points: [""] })}
+          className="add-btn"
+        >
           + Add Project
         </button>
 
@@ -166,7 +246,11 @@ export default function ProfileForm() {
             <button type="button" onClick={() => handleRemoveField("certifications", i)} className="text-red-500 mt-2 text-sm">Remove</button>
           </div>
         ))}
-        <button type="button" onClick={() => handleAddField("certifications", { title: "", org: "", date: "", link: "" })} className="add-btn">
+        <button
+          type="button"
+          onClick={() => handleAddField("certifications", { title: "", org: "", date: "", link: "" })}
+          className="add-btn"
+        >
           + Add Certification
         </button>
 
@@ -181,12 +265,19 @@ export default function ProfileForm() {
             <button type="button" onClick={() => handleRemoveField("education", i)} className="text-red-500 mt-2 text-sm">Remove</button>
           </div>
         ))}
-        <button type="button" onClick={() => handleAddField("education", { institution: "", duration: "", degree: "", grade: "" })} className="add-btn">
+        <button
+          type="button"
+          onClick={() => handleAddField("education", { institution: "", duration: "", degree: "", grade: "" })}
+          className="add-btn"
+        >
           + Add Education
         </button>
 
         {/* Submit */}
-        <button type="submit" className="w-full mt-8 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg">
+        <button
+          type="submit"
+          className="w-full mt-8 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg"
+        >
           Submit
         </button>
       </form>
