@@ -60,9 +60,12 @@ export default function Basic() {
 
       const data = await res.json();
       setResults(data);
-    } catch (err: any) {
-      console.error("Error analyzing resume:", err);
-      alert("❌ Something went wrong. Please try again.");
+    } catch (err) {
+      if (err instanceof Error) {
+        alert(`❌ ${err.message}`);
+      } else {
+        alert("❌ Something went wrong. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -144,13 +147,12 @@ export default function Basic() {
             <div className="flex justify-between items-center">
               <h3 className="font-semibold">ATS Score</h3>
               <span
-                className={`text-2xl font-bold ${
-                  results.atsScore >= 80
+                className={`text-2xl font-bold ${results.atsScore >= 80
                     ? "text-green-600"
                     : results.atsScore >= 50
-                    ? "text-yellow-500"
-                    : "text-red-600"
-                }`}
+                      ? "text-yellow-500"
+                      : "text-red-600"
+                  }`}
               >
                 {results.atsScore}/100
               </span>
@@ -164,8 +166,8 @@ export default function Basic() {
                     results.atsScore >= 80
                       ? "green"
                       : results.atsScore >= 50
-                      ? "orange"
-                      : "red",
+                        ? "orange"
+                        : "red",
                 }}
               ></div>
             </div>
@@ -176,13 +178,12 @@ export default function Basic() {
             <div className="flex justify-between items-center">
               <h3 className="font-semibold">Keyword Match</h3>
               <span
-                className={`text-2xl font-bold ${
-                  results.keywordMatch >= 80
+                className={`text-2xl font-bold ${results.keywordMatch >= 80
                     ? "text-green-600"
                     : results.keywordMatch >= 50
-                    ? "text-yellow-500"
-                    : "text-red-600"
-                }`}
+                      ? "text-yellow-500"
+                      : "text-red-600"
+                  }`}
               >
                 {results.keywordMatch}%
               </span>
@@ -196,8 +197,8 @@ export default function Basic() {
                     results.keywordMatch >= 80
                       ? "green"
                       : results.keywordMatch >= 50
-                      ? "orange"
-                      : "red",
+                        ? "orange"
+                        : "red",
                 }}
               ></div>
             </div>
