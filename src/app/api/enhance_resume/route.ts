@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI, createUserContent } from "@google/genai";
-import type { ResumeData } from "@/templates/dynamicResumeTemplate";
+import type { ResumeData } from "../../../templates/dynamicResumeTemplate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,15 +14,14 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { formData, jobDescription } = body;
-    const apiKey = process.env.GEMINI_API_KEY;
 
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
         { error: "Missing API Key in server environment." },
         { status: 500 }
       );
     }
-
     if (!formData || !jobDescription) {
       return NextResponse.json(
         { error: "Missing formData or jobDescription." },
@@ -30,10 +29,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-
-    // ✅ Initialize Gemini client
+    // Gemini prompt...
     const ai = new GoogleGenAI({ apiKey });
-
     // ✅ Prompt for Gemini
     const prompt = `
 You are an AI assistant that improves resumes to match job descriptions.
@@ -82,10 +79,8 @@ Return only the JSON inside a fenced block like:
 { ... }
 \`\`\`
 `;
-
     const content = createUserContent(prompt);
 
-    // ✅ Call Gemini 2.0 model
     const response = await ai.models.generateContent({
       model: "gemini-2.0-flash",
       contents: [content],
@@ -93,57 +88,53 @@ Return only the JSON inside a fenced block like:
 
     const fullText = response?.text || "";
     if (!fullText.trim()) {
-      return NextResponse.json(
-        { error: "No response from Gemini model." },
-        { status: 502 }
-      );
+      return NextResponse.json({ error: "No response from Gemini model." }, { status: 502 });
     }
 
-    // ✅ Extract JSON block safely
-    const match = fullText.match(/```json\s*([\s\S]*?)\s*```/i);
     let enhanced: ResumeData | null = null;
-
+    const match = fullText.match(/```json\s*([\s\S]*?)\s*```/i);
     if (match?.[1]) {
-      try {
-        enhanced = JSON.parse(match[1]) as ResumeData;
-      } catch (err) {
-        console.error("JSON parse error:", err);
-      }
+      try { enhanced = JSON.parse(match[1]) as ResumeData; } catch { }
     }
-
     if (!enhanced) {
       const start = fullText.indexOf("{");
       const end = fullText.lastIndexOf("}");
       if (start !== -1 && end > start) {
-        try {
-          enhanced = JSON.parse(fullText.slice(start, end + 1)) as ResumeData;
-        } catch (err) {
-          console.error("Fallback parse error:", err);
-        }
+        try { enhanced = JSON.parse(fullText.slice(start, end + 1)) as ResumeData; } catch { }
       }
     }
-
     if (!enhanced) {
-      return NextResponse.json(
-        { error: "Gemini did not return valid JSON.", raw: fullText },
-        { status: 502 }
-      );
+      return NextResponse.json({ error: "Gemini did not return valid JSON.", raw: fullText }, { status: 502 });
     }
 
-    // ✅ Auto-call /api/fill_form to generate LaTeX
-    const latexResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/fill_form`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(enhanced),
-      }
-    );
+    // ✅ Build absolute base URL for server-side fetch
+    const base =
+      process.env.NEXT_PUBLIC_BASE_URL ||
+      req.nextUrl.origin ||
+      "http://localhost:3000";
+    // works locally & on Vercel
+    // Fallback (paranoid): const base = new URL(req.url).origin;
 
-    const latexData = await latexResponse.json();
+    const fillFormUrl = `${base}/api/fill`;
+    const latexResponse = await fetch(fillFormUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(enhanced),
+    });
 
     if (!latexResponse.ok) {
-      console.error("❌ LaTeX generation failed:", latexData);
+      const raw = await latexResponse.text(); // may be HTML
+      console.error("❌ /api/fill failed:", latexResponse.status, raw);
+      return NextResponse.json({ error: "fill_form failed", raw }, { status: 502 });
+    }
+
+    let latexData: { latex?: string };
+    try {
+      latexData = await latexResponse.json();
+    } catch {
+      const raw = await latexResponse.text();
+      console.error("❌ Invalid JSON from /api/fill:", raw);
+      return NextResponse.json({ error: "Invalid JSON from fill_form", raw }, { status: 502 });
     }
 
     const result: EnhancedResumeResponse = {
@@ -154,7 +145,7 @@ Return only the JSON inside a fenced block like:
     return NextResponse.json(result);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unexpected error";
-    console.error("❌ Error in /api/enhance:", message);
+    console.error("❌ Error in /api/enhance_resume:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

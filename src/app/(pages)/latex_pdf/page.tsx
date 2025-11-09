@@ -18,11 +18,11 @@ export default function LatexPDF() {
     [code, isCompiling]
   );
 
-  // ✅ Auto-fetch LaTeX every 10 seconds if new data is available
+  // Auto-fetch LaTeX every 10 seconds if new data is available
   useEffect(() => {
     const pollForLatex = async () => {
       try {
-        const res = await fetch("/api/fill_form"); // GET
+        const res = await fetch("/api/fill"); // GET
         if (!res.ok) return;
         const data: { updated?: boolean; latex?: string } = await res.json();
 
@@ -31,7 +31,7 @@ export default function LatexPDF() {
           setCode(data.latex);
         }
       } catch (err) {
-        // ✅ Properly typed error handling
+        // Properly typed error handling
         if (err instanceof Error) {
           console.error("Polling error:", err.message);
         } else {
@@ -40,7 +40,7 @@ export default function LatexPDF() {
       }
     };
 
-    const interval = setInterval(pollForLatex, 10000);
+    const interval = setInterval(pollForLatex, 3000);
     return () => clearInterval(interval);
   }, []);
 
@@ -67,7 +67,7 @@ export default function LatexPDF() {
         return url;
       });
     } catch (err) {
-      // ✅ Strongly typed error
+      // Strongly typed error
       if (err instanceof Error) {
         setError(err.message);
       } else {
