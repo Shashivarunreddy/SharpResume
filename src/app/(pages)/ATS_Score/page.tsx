@@ -1,55 +1,87 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type AnalysisResult = {
-  summary: string;
+  summary?: string;
   atsScore: number;
   keywordMatch: number;
   improvementTips: string[];
   Suggestions: string[];
   projects: string[];
   toAdd: string[];
-  raw: string;
+  raw?: string;
 };
 
 export default function Basic() {
   const router = useRouter();
+  const fileRef = useRef<HTMLInputElement | null>(null);
+  const jdRef = useRef<HTMLTextAreaElement | null>(null);
   const [results, setResults] = useState<AnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  async function handleSubmit(formData: FormData) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+
+    const file = fileRef.current?.files?.[0];
+    const jd = jdRef.current?.value?.trim();
+
+    if (!file) {
+      alert("📄 Please upload your resume file before submitting.");
+      return;
+    }
+
+    if (!jd) {
+      alert("📝 Please paste the job description before analyzing.");
+      return;
+    }
+
+    setIsLoading(true);
+    setResults(null);
+
     try {
-      setIsLoading(true);
+      const formData = new FormData();
+      formData.append("resume", file);
+      formData.append("jobDescription", jd);
+
+      console.log("File selected:", file.name);
+      console.log("Job description length:", jd.length);
+
       const res = await fetch("/api/ATS_Score", {
         method: "POST",
         body: formData,
       });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to analyze resume");
+      }
+
       const data = await res.json();
       setResults(data);
+    } catch (err: any) {
+      console.error("Error analyzing resume:", err);
+      alert("❌ Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }
   }
 
   return (
-    <div className="min-h-screen bg-white text-black flex flex-col items-center p-8">
-      <h1 className="text-2xl font-bold mb-6">ATS Score</h1>
+    <div className="min-h-screen bg-white text-black flex flex-col items-center p-6">
+      <h1 className="text-2xl font-bold mb-6 text-center">ATS Resume Analyzer</h1>
 
-      {/* Form */}
       <form
-        onSubmit={async (e) => {
-          e.preventDefault();
-          const fd = new FormData(e.currentTarget);
-          await handleSubmit(fd);
-        }}
-        className="w-full max-w-xl space-y-4 border border-black rounded-xl p-6"
+        onSubmit={handleSubmit}
+        encType="multipart/form-data"
+        className="w-full max-w-xl space-y-4 border border-black rounded-xl p-6 shadow-sm bg-white"
       >
         {/* Resume Upload */}
         <div>
           <label className="block mb-1 font-medium">Upload Resume</label>
           <input
+            ref={fileRef}
             type="file"
             name="resume"
             accept=".pdf,.doc,.docx"
@@ -62,6 +94,7 @@ export default function Basic() {
         <div>
           <label className="block mb-1 font-medium">Job Description</label>
           <textarea
+            ref={jdRef}
             name="jobDescription"
             rows={8}
             className="w-full border border-black rounded-lg p-2 bg-white text-black"
@@ -72,8 +105,8 @@ export default function Basic() {
 
         <button
           type="submit"
-          className="w-full border border-black rounded-lg p-2 font-semibold hover:bg-black hover:text-white transition"
           disabled={isLoading}
+          className="w-full border border-black rounded-lg p-2 font-semibold hover:bg-black hover:text-white transition"
         >
           {isLoading ? "Analyzing…" : "Analyze Resume"}
         </button>
@@ -103,7 +136,7 @@ export default function Basic() {
 
       {/* Results */}
       {results && !isLoading && (
-        <div className="w-full max-w-2xl mt-8 border border-black rounded-xl p-6 space-y-6">
+        <div className="w-full max-w-2xl mt-8 border border-black rounded-xl p-6 space-y-6 bg-white shadow">
           <h2 className="text-xl font-bold mb-2">Results</h2>
 
           {/* ATS Score */}
@@ -180,7 +213,7 @@ export default function Basic() {
             </ul>
           </div>
 
-          {/* Skills */}
+          {/* Skills to Add */}
           <div>
             <h3 className="font-semibold">Skills to Add</h3>
             <ul className="list-disc pl-5 text-sm">
@@ -210,7 +243,6 @@ export default function Basic() {
             </ul>
           </div>
 
-          {/* Button */}
           <div className="mt-6 flex flex-col items-center">
             <button
               onClick={() => router.push("/")}

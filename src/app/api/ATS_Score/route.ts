@@ -5,14 +5,11 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type ImprovementItem = string | { name: string; description?: string };
-type BulletItem = { section?: string; original?: string; suggested: string };
-
 type ModelJSON = {
   atsScore?: number;
   keywordMatch?: number;
   improvementTips?: ImprovementItem[];
   skillsToAdd?: ImprovementItem[];
-  bullets?: BulletItem[];
   projectideas?: ImprovementItem[];
   notes?: ImprovementItem[];
 };
@@ -24,34 +21,20 @@ export async function POST(req: NextRequest) {
     const file = form.get("resume") as File | null;
 
     if (!jd || !file) {
-      return NextResponse.json(
-        { error: "Missing jobDescription or resume." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Missing jobDescription or resume." }, { status: 400 });
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return NextResponse.json(
-        { error: "Server missing API Key. Set GEMINI_API_KEY in .env." },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Server missing GEMINI_API_KEY." }, { status: 500 });
     }
 
     const ai = new GoogleGenAI({ apiKey });
-
-    // Upload file
-    const uploaded = await ai.files.upload({
-      file,
-      config: { displayName: file.name },
-    });
+    const uploaded = await ai.files.upload({ file, config: { displayName: file.name } });
 
     const uploadedName = "name" in uploaded ? uploaded.name : undefined;
     if (!uploadedName) {
-      return NextResponse.json(
-        { error: "Upload succeeded but no file name returned." },
-        { status: 502 }
-      );
+      return NextResponse.json({ error: "Upload succeeded but no file name returned." }, { status: 502 });
     }
 
     // Wait until ACTIVE
@@ -62,44 +45,28 @@ export async function POST(req: NextRequest) {
     }
 
     if (meta.state !== "ACTIVE" || !meta.uri || !meta.mimeType) {
-      return NextResponse.json(
-        { error: "File processing failed (not ACTIVE or missing uri/mimeType)." },
-        { status: 502 }
-      );
+      return NextResponse.json({ error: "File not ready or missing meta info." }, { status: 502 });
     }
 
-    // Prompt for Gemini
     const system = `
 You are an ATS scoring assistant.
 
-Analyze the attached resume against the job description and return:
-1. ATS score (0–100)
-2. Keyword match percentage (0–100)
-3. Key missing keywords or skill gaps
-4. Suggestions to improve both scores
-5. Optional: bullet rewrites, project ideas, notes
-
-Output exactly this JSON inside a fenced code block:
-\`\`\`json
+Analyze the attached resume and return:
 {
   "atsScore": 0,
   "keywordMatch": 0,
   "improvementTips": [],
   "skillsToAdd": [],
-  "bullets": [],
   "projectideas": [],
   "notes": []
-}
-\`\`\`
-`;
+}`;
 
-    const filePart = createPartFromUri(meta.uri, meta.mimeType);
     const contents = createUserContent([
       system,
       "\nJob Description:\n",
       jd,
-      "\nResume file attached below.\n",
-      filePart,
+      "\nResume file below.\n",
+      createPartFromUri(meta.uri, meta.mimeType),
     ]);
 
     const resp = await ai.models.generateContent({
@@ -107,32 +74,26 @@ Output exactly this JSON inside a fenced code block:
       contents,
     });
 
-    if (!resp.text) {
-      return NextResponse.json(
-        { error: "Gemini returned no text response." },
-        { status: 502 }
-      );
-    }
+    const text = resp.text;
+    if (!text) return NextResponse.json({ error: "No text output from Gemini." }, { status: 502 });
 
-    const full = resp.text;
+    const match = text.match(/```json\s*([\s\S]*?)\s*```/i);
     let parsed: ModelJSON | null = null;
 
-    // Extract JSON block
-    const match = full.match(/```json\s*([\s\S]*?)\s*```/i);
-    if (match && match[1]) {
+    if (match?.[1]) {
       try {
-        parsed = JSON.parse(match[1]) as ModelJSON;
+        parsed = JSON.parse(match[1]);
       } catch {
         parsed = null;
       }
     }
 
     if (!parsed) {
-      const fb = full.indexOf("{");
-      const lb = full.lastIndexOf("}");
+      const fb = text.indexOf("{");
+      const lb = text.lastIndexOf("}");
       if (fb !== -1 && lb > fb) {
         try {
-          parsed = JSON.parse(full.slice(fb, lb + 1)) as ModelJSON;
+          parsed = JSON.parse(text.slice(fb, lb + 1));
         } catch {
           parsed = null;
         }
@@ -140,23 +101,11 @@ Output exactly this JSON inside a fenced code block:
     }
 
     if (!parsed) {
-      return NextResponse.json(
-        { error: "Failed to parse JSON from model output." },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Failed to parse model output." }, { status: 500 });
     }
 
-    // ✅ Type-safe flatten helper
-    const flatten = <T extends string | { name: string; description?: string }>(
-      arr?: T[]
-    ): string[] =>
-      arr?.map((x) =>
-        typeof x === "string"
-          ? x
-          : x?.name
-          ? `${x.name}: ${x.description ?? ""}`
-          : JSON.stringify(x)
-      ) ?? [];
+    const flatten = <T extends string | { name: string; description?: string }>(arr?: T[]): string[] =>
+      arr?.map((x) => (typeof x === "string" ? x : `${x.name}: ${x.description ?? ""}`)) ?? [];
 
     return NextResponse.json({
       atsScore: parsed.atsScore ?? 0,
@@ -165,8 +114,7 @@ Output exactly this JSON inside a fenced code block:
       Suggestions: flatten(parsed.notes),
       projects: flatten(parsed.projectideas),
       toAdd: flatten(parsed.skillsToAdd),
-      raw: full,
-      json: parsed,
+      raw: text,
     });
   } catch (e: unknown) {
     const errMsg = e instanceof Error ? e.message : "Unknown error occurred";
