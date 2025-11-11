@@ -31,38 +31,35 @@ export default function LatexPDF() {
 
         const data = await res.json();
         if (data.latex && data.latex.trim().length > 0) {
-          console.log("📥 Loaded LaTeX successfully");
           setCode(data.latex);
           lastLatexRef.current = data.latex;
         } else {
-          console.log("⚠️ No LaTeX available from /api/fill");
+          console.error("No LaTeX data found on initial fetch.");
         }
       } catch (err) {
-        console.error("❌ Error fetching LaTeX:", err);
+        console.error(" Error fetching LaTeX:", err);
       } finally {
         setLoading(false);
       }
     };
 
     fetchLatexOnce();
-  }, []); // 👈 empty dependency = runs once
+  }, []); // empty dependency = runs once
 
-  // 🧠 Manual refresh (only when user clicks)
+  //  Manual refresh (only when user clicks)
   const handleManualRefresh = async () => {
     try {
-      console.log("🔄 Manually fetching latest LaTeX...");
       setLoading(true);
       const res = await fetch("/api/fill", { cache: "no-store" });
       const data = await res.json();
       if (data.latex && data.latex.trim().length > 0) {
         setCode(data.latex);
         lastLatexRef.current = data.latex;
-        console.log("✅ Refreshed LaTeX successfully.");
       } else {
-        console.log("⚠️ Still no LaTeX data found.");
+        console.error("Still no LaTeX data found.");
       }
     } catch (err) {
-      console.error("❌ Refresh error:", err);
+      console.error("Refresh error:", err);
     } finally {
       setLoading(false);
     }
@@ -74,7 +71,7 @@ export default function LatexPDF() {
     setIsCompiling(true);
     setError(null);
     try {
-      const res = await fetch("http://13.208.244.123:3001/generate", {
+      const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code }),
