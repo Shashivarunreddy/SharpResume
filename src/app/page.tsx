@@ -4,8 +4,13 @@ import React from "react";
 
 
 
-export default function Page() {
-  return <LayoutTextFlipDemo />;
+export default function Home() {
+
+  return (
+  <div>
+    <LayoutTextFlipDemo />;
+  </div>
+  );
 }
 
 

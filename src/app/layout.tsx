@@ -34,7 +34,8 @@ export default function RootLayout({
               pointerEvents: "none",
             }}
           >
-            <AuroraBackground children />
+            <AuroraBackground><></></AuroraBackground>
+            
           </div>
 
           {/* Foreground content */}
