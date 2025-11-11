@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
     if (!apiKey) {
       return NextResponse.json({ error: "Missing GEMINI_API_KEY" }, { status: 500 });
     }
+
     if (!formData || !jobDescription) {
       return NextResponse.json({ error: "Missing formData or jobDescription" }, { status: 400 });
     }
@@ -79,33 +80,41 @@ Return the JSON inside a fenced block like:
       return NextResponse.json({ error: "Empty response from Gemini" }, { status: 502 });
     }
 
-    // Extract JSON
+    // Extract JSON safely
     let enhanced: ResumeData | null = null;
     const match = fullText.match(/```json\s*([\s\S]*?)\s*```/i);
+
     if (match?.[1]) {
       try {
         enhanced = JSON.parse(match[1]) as ResumeData;
-      } catch {}
-    }
-    if (!enhanced) {
-      const s = fullText.indexOf("{");
-      const e = fullText.lastIndexOf("}");
-      if (s !== -1 && e > s) {
-        try {
-          enhanced = JSON.parse(fullText.slice(s, e + 1)) as ResumeData;
-        } catch {}
+      } catch {
+        enhanced = null;
       }
     }
+
+    if (!enhanced) {
+      const start = fullText.indexOf("{");
+      const end = fullText.lastIndexOf("}");
+      if (start !== -1 && end > start) {
+        try {
+          enhanced = JSON.parse(fullText.slice(start, end + 1)) as ResumeData;
+        } catch {
+          enhanced = null;
+        }
+      }
+    }
+
     if (!enhanced) {
       return NextResponse.json({ error: "Invalid JSON", raw: fullText }, { status: 502 });
     }
 
     const latexCode = dynamicResumeTemplate(enhanced);
-
     const result: EnhancedResumeResponse = { enhanced, latex: latexCode };
+
     return NextResponse.json(result, { status: 200 });
-  } catch (error: any) {
-    console.error("❌ /api/enhance_resume error:", error);
-    return NextResponse.json({ error: error.message || "Server Error" }, { status: 500 });
+  } catch (err: unknown) {
+    const errorMessage =
+      err instanceof Error ? err.message : "Unexpected server error";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

@@ -71,7 +71,6 @@ export default function EnhanceResumeForm() {
     education: [{ institution: "", duration: "", degree: "", grade: "" }],
   });
   const [output, setOutput] = useState("");
-  const [latex, setLatex] = useState("");
   const [loading, setLoading] = useState(false);
 
   // ✅ Generic input handler
@@ -143,10 +142,9 @@ export default function EnhanceResumeForm() {
     e.preventDefault();
     setLoading(true);
     setOutput("");
-    setLatex("");
 
     try {
-      // 1️⃣ Send to enhance_resume API
+      // Send to enhance_resume API
       const res = await fetch("/api/enhance_resume", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -160,11 +158,10 @@ export default function EnhanceResumeForm() {
         return;
       }
 
-      // 2️⃣ Show enhanced data in UI
+      // Show enhanced data in UI
       setOutput(JSON.stringify(data.enhanced, null, 2));
-      if (data.latex) setLatex(data.latex);
 
-      // 3️⃣ Now FRONTEND sends enhanced data to /api/fill
+      //  Now FRONTEND sends enhanced data to /api/fill
       const fillRes = await fetch("/api/fill", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

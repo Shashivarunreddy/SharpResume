@@ -20,15 +20,18 @@ export async function POST(req: Request) {
     lastFormData = { ...data, latex: latexCode };
     hasNewUpdate = true;
 
-    console.log("💾 /api/fill stored new LaTeX:", latexCode.slice(0, 80));
 
     return NextResponse.json({
-      message: "✅ LaTeX generated successfully",
+      message: "LaTeX generated successfully",
       latex: latexCode,
     });
-  } catch (err: any) {
-    console.error("❌ Error in /api/fill:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    // ✅ Type-safe error handling
+    const errorMessage =
+      err instanceof Error ? err.message : "Unknown server error";
+    console.error("Error in /api/fill:", errorMessage);
+
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
@@ -48,8 +51,12 @@ export async function GET() {
 
     hasNewUpdate = false;
     return NextResponse.json(response);
-  } catch (err: any) {
-    console.error("❌ GET /api/fill:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    // ✅ Type-safe error handling
+    const errorMessage =
+      err instanceof Error ? err.message : "Unknown server error";
+    console.error("GET /api/fill:", errorMessage);
+
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
