@@ -1,49 +1,74 @@
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import CodeMirror from "@uiw/react-codemirror";
 import { StreamLanguage } from "@codemirror/language";
 import { stex } from "@codemirror/legacy-modes/mode/stex";
 import { oneDark } from "@codemirror/theme-one-dark";
 
 export default function LatexPDF() {
-  const [code, setCode] = useState(
+  const [code, setCode] = useState<string>(
     "\\documentclass{article}\n\\begin{document}\nHello, \\LaTeX!\n\\end{document}"
   );
   const [pdfUrl, setPdfUrl] = useState("");
   const [isCompiling, setIsCompiling] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const lastLatexRef = useRef<string>("");
 
   const canCompile = useMemo(
     () => code.trim().length > 0 && !isCompiling,
     [code, isCompiling]
   );
 
-  // Auto-fetch LaTeX every 10 seconds if new data is available
+  // 🧩 Fetch latest LaTeX once on page load
   useEffect(() => {
-    const pollForLatex = async () => {
+    const fetchLatexOnce = async () => {
       try {
-        const res = await fetch("/api/fill"); // GET
-        if (!res.ok) return;
-        const data: { updated?: boolean; latex?: string } = await res.json();
+        console.log("🔍 Fetching LaTeX once from /api/fill...");
+        const res = await fetch("/api/fill", { cache: "no-store" });
+        if (!res.ok) throw new Error("Failed to fetch LaTeX");
 
-        if (data.updated && data.latex) {
-          console.log("🆕 New LaTeX detected, updating editor...");
+        const data = await res.json();
+        if (data.latex && data.latex.trim().length > 0) {
+          console.log("📥 Loaded LaTeX successfully");
           setCode(data.latex);
+          lastLatexRef.current = data.latex;
+        } else {
+          console.log("⚠️ No LaTeX available from /api/fill");
         }
       } catch (err) {
-        // Properly typed error handling
-        if (err instanceof Error) {
-          console.error("Polling error:", err.message);
-        } else {
-          console.error("Unknown polling error:", err);
-        }
+        console.error("❌ Error fetching LaTeX:", err);
+      } finally {
+        setLoading(false);
       }
     };
 
-    const interval = setInterval(pollForLatex, 3000);
-    return () => clearInterval(interval);
-  }, []);
+    fetchLatexOnce();
+  }, []); // 👈 empty dependency = runs once
 
+  // 🧠 Manual refresh (only when user clicks)
+  const handleManualRefresh = async () => {
+    try {
+      console.log("🔄 Manually fetching latest LaTeX...");
+      setLoading(true);
+      const res = await fetch("/api/fill", { cache: "no-store" });
+      const data = await res.json();
+      if (data.latex && data.latex.trim().length > 0) {
+        setCode(data.latex);
+        lastLatexRef.current = data.latex;
+        console.log("✅ Refreshed LaTeX successfully.");
+      } else {
+        console.log("⚠️ Still no LaTeX data found.");
+      }
+    } catch (err) {
+      console.error("❌ Refresh error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 🧠 Compile LaTeX to PDF
   const compileLatex = async () => {
     if (!canCompile) return;
     setIsCompiling(true);
@@ -67,12 +92,7 @@ export default function LatexPDF() {
         return url;
       });
     } catch (err) {
-      // Strongly typed error
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("Compilation failed due to unknown error");
-      }
+      setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setIsCompiling(false);
     }
@@ -90,11 +110,19 @@ export default function LatexPDF() {
           </span>
         </div>
         <div className="flex items-center gap-3">
-          {error ? (
+          <button
+            onClick={handleManualRefresh}
+            disabled={loading}
+            className="text-xs px-2 py-1 border border-slate-700 rounded hover:bg-slate-800"
+          >
+            {loading ? "Refreshing..." : "Refresh LaTeX"}
+          </button>
+
+          {error && (
             <span className="max-w-[38ch] truncate text-xs text-rose-400">
               {error}
             </span>
-          ) : null}
+          )}
           <button
             onClick={compileLatex}
             disabled={!canCompile}
@@ -112,13 +140,15 @@ export default function LatexPDF() {
         </div>
       </header>
 
-      {/* Main split */}
+      {/* Main */}
       <main className="grid min-h-0 flex-1 grid-cols-[minmax(420px,1fr)_1px_minmax(520px,1fr)]">
-        {/* Left: Editor */}
+        {/* Editor */}
         <section className="flex min-h-0 min-w-[420px] flex-col">
           <div className="flex h-11 items-center justify-between border-b border-slate-800 bg-slate-900/90 px-3">
             <span className="font-semibold">Editor</span>
-            <span className="text-xs text-slate-400">LaTeX (TeX) mode</span>
+            <span className="text-xs text-slate-400">
+              {loading ? "Fetching..." : "Idle"}
+            </span>
           </div>
           <div className="min-h-0 flex-1 p-3">
             <div className="h-full overflow-auto rounded-lg border border-slate-800 shadow-sm">
@@ -137,7 +167,7 @@ export default function LatexPDF() {
         {/* Divider */}
         <div className="h-full w-px bg-gradient-to-b from-slate-800 to-slate-900" />
 
-        {/* Right: Preview */}
+        {/* Preview */}
         <section className="flex min-h-0 min-w-[520px] flex-col">
           <div className="flex h-11 items-center justify-between border-b border-slate-800 bg-slate-900/90 px-3">
             <span className="font-semibold">Preview</span>

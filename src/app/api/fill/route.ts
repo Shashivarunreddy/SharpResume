@@ -6,7 +6,7 @@ interface StoredFormData extends ResumeData {
 }
 
 let lastFormData: StoredFormData | null = null;
-let hasNewUpdate = false; // Tracks if a new LaTeX was generated
+let hasNewUpdate = false;
 
 export async function POST(req: Request) {
   try {
@@ -17,41 +17,39 @@ export async function POST(req: Request) {
     }
 
     const latexCode = dynamicResumeTemplate(data);
-
     lastFormData = { ...data, latex: latexCode };
-    hasNewUpdate = true; // Mark as new update ready
+    hasNewUpdate = true;
+
+    console.log("💾 /api/fill stored new LaTeX:", latexCode.slice(0, 80));
 
     return NextResponse.json({
-      message: "LaTeX generated successfully",
+      message: "✅ LaTeX generated successfully",
       latex: latexCode,
     });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error occurred";
-    console.error("❌ Error generating LaTeX:", message);
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch (err: any) {
+    console.error("❌ Error in /api/fill:", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
 
-// GET endpoint: used by frontend to fetch updated LaTeX
 export async function GET() {
   try {
     if (!lastFormData) {
-      return NextResponse.json({ latex: "", updated: false });
+      return NextResponse.json({
+        latex: "",
+        updated: false,
+      });
     }
 
-    // Send LaTeX only if new update exists
     const response = {
-      latex: hasNewUpdate ? lastFormData.latex : "",
+      latex: lastFormData.latex,
       updated: hasNewUpdate,
     };
 
-    // Reset update flag once fetched
     hasNewUpdate = false;
-
     return NextResponse.json(response);
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error occurred";
-    console.error("❌ Error fetching LaTeX:", message);
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch (err: any) {
+    console.error("❌ GET /api/fill:", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

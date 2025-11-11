@@ -71,9 +71,8 @@ export default function EnhanceResumeForm() {
     education: [{ institution: "", duration: "", degree: "", grade: "" }],
   });
   const [output, setOutput] = useState("");
+  const [latex, setLatex] = useState("");
   const [loading, setLoading] = useState(false);
-
-  // ------------------ Handlers ------------------
 
   // ✅ Generic input handler
   const handleChange = (
@@ -82,7 +81,6 @@ export default function EnhanceResumeForm() {
     key?: string
   ) => {
     const { name, value } = e.target;
-
     if (section === "skills" && key) {
       setFormData((prev) => ({
         ...prev,
@@ -93,31 +91,28 @@ export default function EnhanceResumeForm() {
     }
   };
 
-  // ✅ Type-safe array handler
- const handleArrayChange = <
-  T extends keyof FormData,
-  U extends FormData[T] extends Array<infer R> ? R : never
->(
-  section: T,
-  index: number,
-  key: keyof U,
-  value: string | string[]
-) => {
-  const sectionArray = formData[section] as unknown as U[];
-  const updated = [...sectionArray];
-  const currentItem = updated[index] ?? ({} as U);
+  // ✅ Dynamic array handler
+  const handleArrayChange = <
+    T extends keyof FormData,
+    U extends FormData[T] extends Array<infer R> ? R : never
+  >(
+    section: T,
+    index: number,
+    key: keyof U,
+    value: string | string[]
+  ) => {
+    const sectionArray = formData[section] as unknown as U[];
+    const updated = [...sectionArray];
+    const currentItem = updated[index] ?? ({} as U);
+    updated[index] = { ...(currentItem as object), [key]: value } as U;
 
-  // Ensure it's an object before spreading
-  updated[index] = { ...(currentItem as object), [key]: value } as U;
+    setFormData((prev) => ({
+      ...prev,
+      [section]: updated,
+    }));
+  };
 
-  setFormData((prev) => ({
-    ...prev,
-    [section]: updated,
-  }));
-};
-
-
-  // ✅ Add new item
+  // ✅ Add/Remove Fields
   const handleAddField = <
     T extends keyof FormData,
     U extends FormData[T] extends Array<infer R> ? R : never
@@ -131,7 +126,6 @@ export default function EnhanceResumeForm() {
     }));
   };
 
-  // ✅ Remove item
   const handleRemoveField = <
     T extends keyof FormData,
     U extends FormData[T] extends Array<infer R> ? R : never
@@ -144,39 +138,51 @@ export default function EnhanceResumeForm() {
     setFormData((prev) => ({ ...prev, [section]: updated }));
   };
 
-  // ✅ Submit
+  // ✅ Submit Handler (Flow: frontend -> route -> frontend -> fill)
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
-  setOutput("");
+    e.preventDefault();
+    setLoading(true);
+    setOutput("");
+    setLatex("");
 
-  try {
-    const payload = {
-      jobDescription,
-      formData,
-    };
+    try {
+      // 1️⃣ Send to enhance_resume API
+      const res = await fetch("/api/enhance_resume", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ formData, jobDescription }),
+      });
 
-    const res = await fetch("/api/enhance_resume", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+      const data = await res.json();
 
-    const data = await res.json();
+      if (!res.ok || !data?.enhanced) {
+        alert(data?.error || "Failed to enhance resume.");
+        return;
+      }
 
-    if (res.ok && data.enhanced) {
+      // 2️⃣ Show enhanced data in UI
       setOutput(JSON.stringify(data.enhanced, null, 2));
-    } else if (data?.raw) {
-      setOutput(data.raw);
-    } else {
-      alert("❌ Failed to enhance resume.");
+      if (data.latex) setLatex(data.latex);
+
+      // 3️⃣ Now FRONTEND sends enhanced data to /api/fill
+      const fillRes = await fetch("/api/fill", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data.enhanced),
+      });
+
+      if (fillRes.ok) {
+        console.warn("📨 /api/fill successfully updated from frontend!");
+      } else {
+        console.warn("⚠️ /api/fill failed to update!");
+      }
+    } catch (err) {
+      console.error("❌ Error submitting form:", err);
+      alert("⚠️ Something went wrong while enhancing resume.");
+    } finally {
+      setLoading(false);
     }
-  } catch {
-    alert("⚠️ Error submitting form.");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
 
   // ------------------ JSX ------------------
