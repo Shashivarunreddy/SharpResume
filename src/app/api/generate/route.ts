@@ -18,6 +18,6 @@ export async function POST(req: NextRequest) {
       headers: { "Content-Type": "application/pdf" },
     });
   } catch (err) {
-    return NextResponse.json({ error: "Proxy error" }, { status: 500 });
+    return NextResponse.json({ error: err }, { status: 500 });
   }
 }

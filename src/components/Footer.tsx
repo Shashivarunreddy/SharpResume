@@ -1,12 +1,13 @@
-import React from 'react'
+import { Footer } from "./footer-section";
 
-function Footer() {
-  return (
-    <div className="w-full h-16 flex items-center justify-center bg-gray-100 mt-8">
-      footer of the page
-    </div>
-  )
+
+export default function DemoOne() {
+	return (
+		<div className="relative flex min-h-svh flex-col">
+			<div className="min-h-screen flex items-center justify-center">
+				
+			</div>
+			<Footer />
+		</div>
+	);
 }
-
-export default Footer
-
