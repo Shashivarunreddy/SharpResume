@@ -1,5 +1,6 @@
 "use client";
 import { cn } from "@/lib/utils";
+import Image from 'next/image';
 import { IconMenu2, IconX } from "@tabler/icons-react";
 import {
   motion,
@@ -230,7 +231,7 @@ export const NavbarLogo = () => {
       href="#"
       className="relative z-20 mr-4 flex items-center space-x-2 px-2 py-1"
     >
-      <img
+      <Image 
         src="https://assets.aceternity.com/logo-dark.png"
         alt="logo"
         width={24}

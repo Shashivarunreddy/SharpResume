@@ -8,17 +8,17 @@ export function LayoutTextFlipDemo() {
         <LayoutTextFlip
           text="Make your Resume 10x"
           words={[
-            "Stronger",
             "Smarter",
-            "Faster",
             "Sharper",
             "Sleeker",
-            "Wiser",
+            "Refined",
+            "Polished",
           ]}
         />
       </motion.div>
       <p className="mt-4 text-center text-base text-neutral-600 dark:text-neutral-400">
-        elevate your career with AI-enhanced LaTeX resumes
+        elevates your career with AI-enhanced, precision-crafted LaTeX resumes tailored to your strengths.
+Stand out with clean, modern, and professional designs built to impress top recruiters.
       </p>
     
     </div>
