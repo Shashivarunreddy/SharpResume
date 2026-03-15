@@ -1,10 +1,68 @@
-export function dynamicResumeTemplate(data: any) {
+export interface SkillSet {
+  languages: string;
+  tools: string;
+  web: string;
+  devops: string;
+}
+
+export interface Experience {
+  role: string;
+  company: string;
+  dates: string;
+  location: string;
+  points: string[];
+}
+
+export interface Project {
+  name: string;
+  github: string;
+  live?: string;
+  points: string[];
+}
+
+export interface Certification {
+  title: string;
+  org: string;
+  date: string;
+}
+
+export interface Education {
+  institution: string;
+  duration: string;
+  degree: string;
+  grade: string;
+}
+
+export interface ResumeData {
+  name: string;
+  phone: string;
+  email: string;
+  linkedin: string;
+  github: string;
+  summary: string;
+  skills: SkillSet;
+  experience: Experience[];
+  projects: Project[];
+  certifications: Certification[];
+  education: Education[];
+}
+
+export function dynamicResumeTemplate(data: ResumeData): string {
   const {
-    name, phone, email, linkedin, github, summary,
-    skills, experience, projects, certifications, education
+    name,
+    phone,
+    email,
+    linkedin,
+    github,
+    summary,
+    skills,
+    experience,
+    projects,
+    certifications,
+    education,
   } = data;
 
-  const escape = (text: string = "") =>
+  const escape = (text: string = ""): string =>
     text
       .replace(/\\/g, "\\textbackslash{}")
       .replace(/&/g, "\\&")
@@ -17,36 +75,55 @@ export function dynamicResumeTemplate(data: any) {
       .replace(/\^/g, "\\textasciicircum{}")
       .replace(/~/g, "\\textasciitilde{}");
 
-  const formatExperience = (list: any[] = []) => `
+  const formatExperience = (list: Experience[] = []): string => `
 \\resumeSubHeadingListStart
-${list.map(exp => `
+${list
+  .map(
+    (exp) => `
   \\resumeSubheading{${escape(exp.role)}}{${escape(exp.dates)}}{${escape(exp.company)}}{${escape(exp.location)}}
   \\resumeItemListStart
-  ${exp.points.map((p: string) => `\\resumeItem{${escape(p)}}`).join("\n")}
+  ${exp.points.map((p) => `\\resumeItem{${escape(p)}}`).join("\n")}
   \\resumeItemListEnd
-`).join("\n")}
+`
+  )
+  .join("\n")}
 \\resumeSubHeadingListEnd
 `;
 
-  const formatProjects = (list: any[] = []) => `
+  const formatProjects = (list: Project[] = []): string => `
 \\resumeSubHeadingListStart
-${list.map(p => `
-  \\resumeSubheading{${escape(p.name)}}{\\href{${p.github}}{\\underline{GitHub}}${p.live ? `\\,|\\,\\href{${p.live}}{\\underline{Live}}` : ""}}{}{ }
+${list
+  .map(
+    (p) => `
+  \\resumeSubheading{${escape(p.name)}}{\\href{${p.github}}{\\underline{GitHub}}${
+      p.live ? `\\,|\\,\\href{${p.live}}{\\underline{Live}}` : ""
+    }}{}{ }
   \\resumeItemListStart
-  ${p.points.map((pt: string) => `\\resumeItem{${escape(pt)}}`).join("\n")}
+  ${p.points.map((pt) => `\\resumeItem{${escape(pt)}}`).join("\n")}
   \\resumeItemListEnd
-`).join("\n")}
+`
+  )
+  .join("\n")}
 \\resumeSubHeadingListEnd
 `;
 
-  const formatCertifications = (list: any[] = []) =>
-    list.map(c => `\\item \\textbf{${escape(c.title)}} (${escape(c.org)}, ${escape(c.date)})`).join("\n");
+  const formatCertifications = (list: Certification[] = []): string =>
+    list
+      .map(
+        (c) =>
+          `\\item \\textbf{${escape(c.title)}} (${escape(c.org)}, ${escape(c.date)})`
+      )
+      .join("\n");
 
-  const formatEducation = (list: any[] = []) => `
+  const formatEducation = (list: Education[] = []): string => `
 \\resumeSubHeadingListStart
-${list.map(e => `
+${list
+  .map(
+    (e) => `
   \\resumeSubheading{${escape(e.institution)}}{${escape(e.duration)}}{${escape(e.degree)}}{${escape(e.grade)}}
-`).join("\n")}
+`
+  )
+  .join("\n")}
 \\resumeSubHeadingListEnd
 `;
 
